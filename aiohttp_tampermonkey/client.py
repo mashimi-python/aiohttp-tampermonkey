@@ -1,4 +1,6 @@
 import re
+import logging
+import asyncio
 from io import BytesIO
 from tampermonkey import GM
 
@@ -9,7 +11,11 @@ from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
 
-orig_client_session_request = client.ClientSession._request
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+orig_client_session_request = ClientSession._request
 
 
 class TampermonkeyStreamReader(BytesIO):
@@ -73,7 +79,7 @@ class TampermonkeyClientResponse(ClientResponse):
         return self._body
 
 
-async def clientsession_request(self,
+async def client_session_request(self,
     method,
     str_or_url,
     *,

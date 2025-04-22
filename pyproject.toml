@@ -1,0 +1,20 @@
+[project]
+name = "aiohttp-tampermonkey"
+version = "0.0.1"
+authors = [
+    {name ="Ryan Nowakowski", email="tubaman@fattuba.com"},
+]
+description = "A patch for aiohttp that works with Tampermonkey"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp==3.9.5",
+    "tampermonkey>=0.0.3,<0.1",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Proprietary",
+    "Operating System :: OS Independent",
+]
+[project.optional-dependencies]
+dev = ["ipython", "ipdb", "pytest"]
