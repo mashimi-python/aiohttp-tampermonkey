@@ -12,7 +12,7 @@ from yarl import URL
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.WARNING)
 
 
 orig_client_session_request = ClientSession._request
