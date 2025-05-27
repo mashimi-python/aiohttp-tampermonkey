@@ -45,22 +45,22 @@ class TampermonkeyClientResponse(ClientResponse):
         url = URL(url)
         url_without_fragment = url.with_fragment(None) if url.raw_fragment else url
         request_info = RequestInfo(url=url_without_fragment, method=method, headers=headers, real_url=url)
-        client_response = cls(method, URL(response.finalUrl), writer=None, continue100=None, timer=None,
+        client_response = cls(method, URL(response['finalUrl']), writer=None, continue100=None, timer=None,
                               request_info=request_info, traces=[], loop=asyncio.get_running_loop(), session=None)
         client_response.tampermonkey_response = response
-        client_response.status = response.status
-        client_response.reason = response.statusText
+        client_response.status = response['status']
+        client_response.reason = response['statusText']
         # set up headers
-        logger.debug("response.responseHeaders: %r", response.responseHeaders)
-        client_response._raw_headers = client_response._parse_headers_txt(response.responseHeaders)
+        logger.debug("response['responseHeaders']: %r", response['responseHeaders'])
+        client_response._raw_headers = client_response._parse_headers_txt(response['responseHeaders'])
         headers_str = [(k.decode('ascii'), v.decode('ascii')) for k, v in client_response.raw_headers]
         response_headers = CIMultiDict(headers_str)
         client_response._headers = CIMultiDictProxy(response_headers)
         # set up content
-        if isinstance(client_response.tampermonkey_response.response, str):
-            response_bytes = client_response.tampermonkey_response.response.encode('utf-8')
+        if isinstance(response['response'], str):
+            response_bytes = response['response'].encode('utf-8')
         else:
-            response_bytes = bytes(client_response.tampermonkey_response.response)
+            response_bytes = bytes(response['response'])
         client_response.content = TampermonkeyStreamReader(response_bytes)
         return client_response
 
@@ -114,7 +114,7 @@ async def client_session_request(self,
     logger.debug("headers: %r", headers)
     logger.debug("data: %r", data)
     tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=dict(headers) if headers else None, data=data, responseType='arraybuffer')
-    logger.debug("tampermonkey_response: %r", tampermonkey_response.to_py())
+    logger.debug("tampermonkey_response: %r", tampermonkey_response)
     client_response = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
     return client_response
 
