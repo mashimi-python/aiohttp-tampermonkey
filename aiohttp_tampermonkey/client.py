@@ -7,6 +7,7 @@ from tampermonkey import GM
 from aiohttp.client import ClientSession
 from aiohttp.helpers import sentinel
 from aiohttp.client_reqrep import ClientResponse, RequestInfo
+from aiohttp import payload
 from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
@@ -113,6 +114,18 @@ async def client_session_request(self,
     logger.debug("url: %r", str_or_url)
     logger.debug("headers: %r", headers)
     logger.debug("data: %r", data)
+    logger.debug("json: %r", json)
+
+    if data is not None and json is not None:
+        raise ValueError(
+            "data and json parameters can not be used at the same time"
+        )
+    elif json is not None:
+        data = payload.JsonPayload(json, dumps=self._json_serialize)._value
+
+    # Merge with default headers and transform to CIMultiDict
+    headers = self._prepare_headers(headers)
+
     tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=dict(headers) if headers else None, data=data, responseType='arraybuffer')
     logger.debug("tampermonkey_response: %r", tampermonkey_response)
     client_response = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
