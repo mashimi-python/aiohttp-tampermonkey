@@ -126,7 +126,12 @@ async def client_session_request(self,
     # Merge with default headers and transform to CIMultiDict
     headers = self._prepare_headers(headers)
 
-    tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=dict(headers) if headers else None, data=data, responseType='arraybuffer')
+    # Convert to make it work correctly for GM.xmlHttpRequest
+    if (content_type := headers.get('content-type', None)) and 'application/json' in content_type:
+        if hasattr(data, 'decode'):
+            data = data.decode('utf-8')
+    headers = dict(headers) if headers else None
+    tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=headers, data=data, responseType='arraybuffer')
     logger.debug("tampermonkey_response: %r", tampermonkey_response)
     client_response = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
     return client_response
