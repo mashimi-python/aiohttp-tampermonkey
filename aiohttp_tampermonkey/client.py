@@ -3,11 +3,13 @@ import logging
 import asyncio
 from io import BytesIO
 from tampermonkey import GM
+from http.cookies import CookieError
 
 from aiohttp.client import ClientSession
 from aiohttp.helpers import sentinel
 from aiohttp.client_reqrep import ClientResponse, RequestInfo
-from aiohttp import payload
+from aiohttp.http_parser import HeadersParser
+from aiohttp import payload, hdrs
 from multidict import CIMultiDict, CIMultiDictProxy
 from yarl import URL
 
@@ -53,23 +55,25 @@ class TampermonkeyClientResponse(ClientResponse):
         client_response.reason = response['statusText']
         # set up headers
         logger.debug("response['responseHeaders']: %r", response['responseHeaders'])
-        client_response._raw_headers = client_response._parse_headers_txt(response['responseHeaders'])
-        headers_str = [(k.decode('ascii'), v.decode('ascii')) for k, v in client_response.raw_headers]
-        response_headers = CIMultiDict(headers_str)
-        client_response._headers = CIMultiDictProxy(response_headers)
+        response_header_lines = response['responseHeaders'].encode('ascii').split(b'\r\n') + [b'']
+        response_header_lines = list(cls.fix_set_cookie_headers(response_header_lines))
+        headers, raw_headers = HeadersParser().parse_headers(response_header_lines)
+        client_response._raw_headers = raw_headers
+        client_response._headers = headers
         # set up content
         if isinstance(response['response'], str):
             response_bytes = response['response'].encode('utf-8')
         else:
             response_bytes = bytes(response['response'])
         client_response.content = TampermonkeyStreamReader(response_bytes)
-        return client_response
+        # cookies
+        for hdr in client_response.headers.getall(hdrs.SET_COOKIE, ()):
+            try:
+                client_response.cookies.load(hdr)
+            except CookieError as exc:
+                client_logger.warning("Can not load response cookies: %s", exc)
 
-    def _parse_headers_txt(self, _response_headers):
-        matches = re.findall(r"^([^:]+):\s*(.+)\r$", _response_headers, flags=re.MULTILINE)
-        logger.debug("matches: %r", matches)
-        headers_bytes = ((k.encode('ascii'), v.encode('ascii')) for k, v in matches)
-        return headers_bytes
+        return client_response
 
     async def read(self, *args, **kwargs):
         logger.debug("args: %r", args)
@@ -78,6 +82,18 @@ class TampermonkeyClientResponse(ClientResponse):
         self._body = self.content.read(*args, **kwargs)
         logger.debug("self._body: %r", self._body)
         return self._body
+
+    @staticmethod
+    def fix_set_cookie_headers(header_lines):
+        """Tampermonkey on firefox erroneously puts multiple cookies in a single set-cookie header"""
+        for header_line in header_lines:
+            if header_line.lower().startswith(b'set-cookie:'):
+                set_cookie_header_parts = header_line.split(b'\n')
+                yield set_cookie_header_parts[0]
+                for set_cookie_header_part in set_cookie_header_parts[1:]:
+                    yield b'set-cookie: ' + set_cookie_header_part
+            else:
+                yield header_line
 
 
 async def client_session_request(self,
@@ -133,8 +149,20 @@ async def client_session_request(self,
     headers = dict(headers) if headers else None
     tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=headers, data=data, responseType='arraybuffer')
     logger.debug("tampermonkey_response: %r", tampermonkey_response)
-    client_response = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
-    return client_response
+    resp = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
+
+    # check response status
+    if raise_for_status is None:
+        raise_for_status = self._raise_for_status
+
+    if raise_for_status is None:
+        pass
+    elif callable(raise_for_status):
+        await raise_for_status(resp)
+    elif raise_for_status:
+        resp.raise_for_status()
+
+    return resp
 
 
 def monkeypatch():
