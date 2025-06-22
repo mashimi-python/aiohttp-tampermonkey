@@ -29,10 +29,10 @@ class TampermonkeyStreamReader(BytesIO):
         logger.debug("args: %r", args)
         logger.debug("kwargs: %r", kwargs)
         return super().read(*args, **kwargs)
-        
+
     def set_exception(self, exception):
         self._exception = exception
-        
+
     def exception(self):
         return self._exception
 
