@@ -27,7 +27,7 @@ class TampermonkeyStreamReader(BytesIO):
         super().__init__(*args, **kwargs)
         self._exception = None
 
-    def read(self, *args, **kwargs):
+    async def read(self, *args, **kwargs):
         logger.debug("args: %r", args)
         logger.debug("kwargs: %r", kwargs)
         return super().read(*args, **kwargs)
@@ -79,7 +79,7 @@ class TampermonkeyClientResponse(ClientResponse):
         logger.debug("args: %r", args)
         logger.debug("kwargs: %r", kwargs)
         logger.debug("self._body: %r", self._body)
-        self._body = self.content.read(*args, **kwargs)
+        self._body = await self.content.read(*args, **kwargs)
         logger.debug("self._body: %r", self._body)
         return self._body
 
