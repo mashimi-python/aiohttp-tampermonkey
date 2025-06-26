@@ -127,8 +127,9 @@ async def client_session_request(self,
     max_field_size=None,
 ):
     logger.debug("method: %r", method)
-    logger.debug("url: %r", str_or_url)
+    logger.debug("str_or_url: %r", str_or_url)
     logger.debug("headers: %r", headers)
+    logger.debug("self.headers: %r", self.headers)
     logger.debug("data: %r", data)
     logger.debug("json: %r", json)
 
@@ -143,11 +144,23 @@ async def client_session_request(self,
     headers = self._prepare_headers(headers)
 
     # Convert to make it work correctly for GM.xmlHttpRequest
-    if (content_type := headers.get('content-type', None)) and 'application/json' in content_type:
+    content_type = headers.get('content-type', None)
+    logger.debug("content_type: %r", content_type)
+    if content_type and 'application/json' in content_type:
+        logger.debug("type(data): %r", type(data))
         if hasattr(data, 'decode'):
             data = data.decode('utf-8')
+
     headers = dict(headers) if headers else None
-    tampermonkey_response = await GM.xmlHttpRequest(method=method, url=str(str_or_url), headers=headers, data=data, responseType='arraybuffer')
+    url = str(str_or_url)
+    response_type = 'arraybuffer'
+
+    logger.debug("xmlHttpRequest arg method: %r", method)
+    logger.debug("xmlHttpRequest arg url: %r", url)
+    logger.debug("xmlHttpRequest arg headers: %r", headers)
+    logger.debug("xmlHttpRequest arg data: %r", data)
+    logger.debug("xmlHttpRequest arg response_type: %r", response_type)
+    tampermonkey_response = await GM.xmlHttpRequest(method=method, url=url, headers=headers, data=data, responseType=response_type)
     logger.debug("tampermonkey_response: %r", tampermonkey_response)
     resp = TampermonkeyClientResponse.from_tampermonkey(method, str_or_url, headers, tampermonkey_response)
 
