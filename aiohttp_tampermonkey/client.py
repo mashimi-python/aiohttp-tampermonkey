@@ -96,6 +96,18 @@ class TampermonkeyClientResponse(ClientResponse):
                 yield header_line
 
 
+class AsyncBytesIO:
+
+    def __init__(self):
+        self._bytes_io = BytesIO()
+
+    async def write(self, bytes):
+        return self._bytes_io.write(bytes)
+
+    def getvalue(self):
+        return self._bytes_io.getvalue()
+
+
 async def client_session_request(self,
     method,
     str_or_url,
@@ -150,6 +162,11 @@ async def client_session_request(self,
         logger.debug("type(data): %r", type(data))
         if hasattr(data, 'decode'):
             data = data.decode('utf-8')
+    elif hasattr(data, 'write'):
+        logger.debug("hasattr(data, 'write'): %r", hasattr(data, 'write'))
+        bytes_io = AsyncBytesIO()
+        await data.write(bytes_io)
+        data = bytes_io.getvalue()
 
     headers = dict(headers) if headers else None
     url = str(str_or_url)
