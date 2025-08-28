@@ -5,12 +5,12 @@ from io import BytesIO
 from tampermonkey import GM
 from http.cookies import CookieError
 
-from aiohttp.client import ClientSession
+from aiohttp.client import ClientSession, InvalidURL
 from aiohttp.helpers import sentinel
 from aiohttp.client_reqrep import ClientResponse, RequestInfo
 from aiohttp.http_parser import HeadersParser
 from aiohttp import payload, hdrs
-from multidict import CIMultiDict, CIMultiDictProxy
+from multidict import CIMultiDict, CIMultiDictProxy, MultiDict
 from yarl import URL
 
 
@@ -169,9 +169,20 @@ async def client_session_request(self,
         data = bytes_io.getvalue()
 
     headers = dict(headers) if headers else None
-    url = str(str_or_url)
-    response_type = 'arraybuffer'
 
+    try:
+        url = self._build_url(str_or_url)
+    except ValueError as e:
+        raise InvalidURL(str_or_url) from e
+    if params:
+        q = MultiDict(url.query)
+        url2 = url.with_query(params)
+        q.extend(url2.query)
+        url = url.with_query(q)
+    url = url.with_fragment(None)
+
+    url = str(url)
+    response_type = 'arraybuffer'
     logger.debug("xmlHttpRequest arg method: %r", method)
     logger.debug("xmlHttpRequest arg url: %r", url)
     logger.debug("xmlHttpRequest arg headers: %r", headers)
