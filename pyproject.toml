@@ -1,6 +1,6 @@
 [project]
 name = "aiohttp-tampermonkey"
-version = "0.0.9"
+version = "0.0.10"
 authors = [
     {name ="Ryan Nowakowski", email="tubaman@fattuba.com"},
 ]
@@ -11,9 +11,9 @@ dependencies = [
     "aiohttp==3.9.5",
     "tampermonkey>=0.0.4,<0.1",
 ]
+license = "Apache-2.0"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: Proprietary",
     "Operating System :: OS Independent",
 ]
 [project.optional-dependencies]

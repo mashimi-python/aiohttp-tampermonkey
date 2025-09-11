@@ -38,6 +38,10 @@ class TampermonkeyStreamReader(BytesIO):
     def exception(self):
         return self._exception
 
+    async def iter_chunked(self, n):
+        while chunk := await self.read(n):
+            yield chunk
+
 
 class TampermonkeyClientResponse(ClientResponse):
     """Compatible with https://github.com/aio-libs/aiohttp/blob/master/aiohttp/client_reqrep.py#L761
